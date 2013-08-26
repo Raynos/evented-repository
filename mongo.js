@@ -10,10 +10,13 @@ var NOT_FOUND = TypedError({
 module.exports = EventedRepository
 
 function EventedRepository(db, opts) {
+    if (typeof opts === "string") {
+        opts = { namespace: opts }
+    }
+    opts = opts || {}
+
     var collection = db.collection(opts.namespace)
     var eventCollection = db.collection(opts.namespace + "~events")
-
-    opts = opts || {}
 
     var encoder = opts.encoder || identity
     var decoder = opts.decoder || identity
@@ -52,7 +55,7 @@ function EventedRepository(db, opts) {
                     return callback(err)
                 }
 
-                callback(null, decoder(records[0]))
+                callback(null, decoder(records))
             })
         })
 
@@ -133,6 +136,10 @@ function EventedRepository(db, opts) {
     }
 
     function sub(options) {
+        if (typeof options === "string") {
+            options = { namespace: options }
+        }
+
         options.namespace = opts.namespace + "." + options.namespace
         return EventedRepository(db, options)
     }
