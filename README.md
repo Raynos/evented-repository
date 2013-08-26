@@ -178,7 +178,7 @@ var repo2 = Repository(db, { namespace: "other-app" })
 var users2 = repo.sub({ namespace: "users" })
 ```
 
-### `getById(id, callback)`
+### `Repository.getById(id, callback)`
 
 `getById()` allows you to query the repository for a record by
   it's `primary key`. The callback will get called with the
@@ -191,13 +191,13 @@ var users2 = repo.sub({ namespace: "users" })
 
 `getById()` should be optimized by the main index.
 
-### `getAll(callback)`
+### `Repository.getAll(callback)`
 
 `getAll()` will return all the records in the repository. The
   callback will be called with all the records after they are
   passed through the optional `decoder`
 
-### `getFor(key, value, callback)`
+### `Repository.getFor(key, value, callback)`
 
 `getFor()` queries all the records in the repository and then
   filters them by records where the property `key` has a value
@@ -209,7 +209,7 @@ The callback will get called with all the records that match
 
 `getFor()` is not optimized by an index.
 
-### `getBy(key, value, callback)`
+### `Repository.getBy(key, value, callback)`
 
 **UnImplemented**
 
