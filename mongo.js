@@ -1,4 +1,11 @@
 var uuid = require("uuid")
+var TypedError = require("error/typed")
+var extend = require("xtend")
+
+var NOT_FOUND = TypedError({
+    type: "not.found",
+    message: "could not find key %s"
+})
 
 module.exports = EventedRepository
 
@@ -17,11 +24,12 @@ function EventedRepository(db, opts) {
         store: store,
         update: update,
         remove: remove,
-        getAll: getAll,
-        getFor: getFor,
-        getById: getByPrimaryKey,
         drop: drop,
-        sub: sub
+        sub: sub,
+
+        getById: getByPrimaryKey,
+        getAll: getAll,
+        getFor: getFor
     }
 
     function store(records, callback) {
@@ -58,6 +66,44 @@ function EventedRepository(db, opts) {
         }
     }
 
+    function update(id, delta, callback) {
+        callback = callback || missingCallback
+
+        eventCollection.insert([{
+            name: "record updated",
+            id: id,
+            delta: delta,
+            time: Date.now()
+        }], function (err) {
+            if (err) {
+                return callback(err)
+            }
+
+            var query = {}
+            query[primaryKey] = id
+            collection.findOne(query, function (err, record) {
+                if (err) {
+                    return callback(err)
+                }
+
+                if (record === null) {
+                    return callback(NOT_FOUND(id))
+                }
+
+                var newValue = encoder(extend(record, delta))
+                collection.update(query, {
+                    $set: delta
+                }, function (err) {
+                    if (err) {
+                        return callback(err)
+                    }
+
+                    callback(null, decoder(newValue))
+                })
+            })
+        })
+    }
+
     function remove(id, callback) {
         callback = callback || missingCallback
 
@@ -82,33 +128,13 @@ function EventedRepository(db, opts) {
         })
     }
 
-    function update(id, delta, callback) {
-        callback = callback || missingCallback
+    function drop(callback) {
+        collection.drop(callback)
+    }
 
-        eventCollection.insert([{
-            name: "record updated",
-            id: id,
-            delta: delta,
-            time: Date.now()
-        }], function (err) {
-            if (err) {
-                return callback(err)
-            }
-
-            var query = {}
-            query[primaryKey] = id
-            collection.findAndModify(query, [[primaryKey, -1]], {
-                $set: delta
-            }, {
-                "new": true
-            }, function (err, record) {
-                if (err) {
-                    return callback(err)
-                }
-
-                callback(null, decoder(record))
-            })
-        })
+    function sub(options) {
+        options.namespace = opts.namespace + "." + options.namespace
+        return EventedRepository(db, options)
     }
 
     function getByPrimaryKey(key, callback) {
@@ -145,36 +171,6 @@ function EventedRepository(db, opts) {
 
             callback(null, records.map(decoder))
         })
-    }
-
-    function drop(callback) {
-        var count = 2
-        var done = false
-        collection.drop(function (err) {
-            if (err && !done) {
-                done = true
-                return callback(err)
-            }
-
-            if (--count === 0) {
-                callback(null)
-            }
-        })
-        eventCollection.drop(function (err) {
-            if (err && !done) {
-                done = true
-                return callback(err)
-            }
-
-            if (--count === 0) {
-                callback(null)
-            }
-        })
-    }
-
-    function sub(options) {
-        options.namespace = opts.namespace + "." + options.namespace
-        return EventedRepository(db, options)
     }
 }
 
