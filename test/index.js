@@ -1,8 +1,17 @@
+var mongo = require("continuable-mongo")
 var test = require("tape")
 
-var eventedRepository = require("../index")
+var MongoRepository = require("../mongo.js")
+var TestRepository = require("./repository-test.js")
 
-test("eventedRepository is a function", function (assert) {
-    assert.equal(typeof eventedRepository, "function")
-    assert.end()
+var db = mongo("mongodb://localhost:27017/evented-repository")
+
+TestRepository(test, MongoRepository, db)
+
+test("close mongo", function (assert) {
+    db.close(function (err) {
+        assert.ifError(err)
+
+        assert.end()
+    })
 })
