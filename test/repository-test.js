@@ -3,7 +3,10 @@ var uuid = require("uuid")
 module.exports = TestRepository
 
 function TestRepository(test, Repository, db) {
-    var repo = Repository(db, "main")
+    var repo = Repository(db, {
+        namespace: "main",
+        indexes: ["country"]
+    })
 
     test("repository has correct methods", function (assert) {
         assert.equal(typeof repo.store, "function")
@@ -176,18 +179,219 @@ function TestRepository(test, Repository, db) {
         })
     })
 
-    test("getById() non existant", skip)
+    test("getById() non existant", function (assert) {
+        var id = uuid()
+        repo.getById(id, function (err, record) {
+            assert.ifError(err)
 
-    test("getAll() on a sub", skip)
-    test("getFor() on a sub", skip)
-    test("getBy() on a sub", skip)
-    test("getBy() non indexed key", skip)
+            assert.equal(record, null)
 
-    test("getBy() vs getFor() performance", skip)
-    test("getById() vs getFor() performance", skip)
+            assert.end()
+        })
+    })
+
+    test("getAll() on a sub", function (assert) {
+        var id = uuid()
+        var sub = repo.sub(id)
+
+        sub.store([
+            { name: "steve", id: "3" },
+            { name: "mary", id: "1" },
+            { name: "bob", id: "2" }
+        ], function (err) {
+            assert.ifError(err)
+
+            sub.getAll(function (err, records) {
+                assert.ifError(err)
+
+                assert.equal(records[0].name, "mary")
+                assert.equal(records[1].name, "bob")
+                assert.equal(records[2].name, "steve")
+
+                assert.end()
+            })
+        })
+    })
+
+    test("getFor() on a sub", function (assert) {
+        var id = uuid()
+        var sub = repo.sub(id)
+
+        sub.store([
+            { name: "steve", id: "3", sex: "male" },
+            { name: "mary", id: "1", sex: "female" },
+            { name: "bob", id: "2", sex: "male" },
+            { name: "susan", id: "4", sex: "female" }
+        ], function (err) {
+            assert.ifError(err)
+
+            sub.getFor("sex", "male", function (err, records) {
+                assert.ifError(err)
+
+                assert.equal(records[0].name, "bob")
+                assert.equal(records[1].name, "steve")
+
+                assert.end()
+            })
+        })
+    })
+
+    test("getBy() on a sub", function (assert) {
+        var id = uuid()
+        var sub = repo.sub({
+            indexes: ["sex"],
+            namespace: id
+        })
+
+        sub.store([
+            { name: "steve", id: "3", sex: "male" },
+            { name: "mary", id: "1", sex: "female" },
+            { name: "bob", id: "2", sex: "male" },
+            { name: "susan", id: "4", sex: "female" }
+        ], function (err) {
+            assert.ifError(err)
+
+            sub.getBy("sex", "male", function (err, records) {
+                assert.ifError(err)
+
+                assert.equal(records[0].name, "bob")
+                assert.equal(records[1].name, "steve")
+
+                assert.end()
+            })
+        })
+    })
+
+    test("getBy() non indexed key", function (assert) {
+        repo.getBy("name", "steve", function (err) {
+            assert.ok(err)
+            assert.equal(err.type, "nonexistant.index")
+
+            assert.end()
+        })
+    })
+
+    test("getBy() vs getFor() performance", function (assert) {
+        var id = uuid()
+        var sub1 = repo.sub({
+            indexes: ["count"],
+            namespace: id
+        })
+        var sub2 = repo.sub(id + "_id")
+
+        var records = range(0, 100000).map(function (index) {
+            return {
+                id: index,
+                sex: index % 2 === 0 ? "male" : "female",
+                count: String(index % 100)
+            }
+        })
+
+        var count = 2
+        var byTime
+        var forTime
+        sub1.store(records, function (err) {
+            assert.ifError(err)
+
+            sub2.store(records, function (err) {
+                assert.ifError(err)
+
+                var startBy = Date.now()
+                sub1.getBy("count", "50", function (err, records) {
+                    assert.ifError(err)
+
+                    byTime = Date.now() - startBy
+
+                    assert.equal(records.length, 1000)
+
+                    var startFor = Date.now()
+                    sub2.getFor("count", "50", function (err, records) {
+                        assert.ifError(err)
+
+                        forTime = Date.now() - startFor
+
+                        assert.equal(records.length, 1000)
+
+                        assert.ok(byTime * 1.5 < forTime)
+
+                        assert.end()
+                    })
+                })
+            })
+        })
+    })
+
+    test("getById() vs getFor() performance", function (assert) {
+        var id = uuid()
+        var sub1 = repo.sub({
+            indexes: ["count"],
+            namespace: id
+        })
+        var sub2 = repo.sub(id + "_id")
+
+        var records = range(0, 100000).map(function (index) {
+            return {
+                id: index,
+                sex: index % 2 === 0 ? "male" : "female",
+                count: String(index % 100)
+            }
+        })
+
+        var count = 2
+        var byTime
+        var forTime
+        var targetId = records[50000].id
+        sub1.store(records, function (err) {
+            assert.ifError(err)
+
+            sub2.store(records, function (err) {
+                assert.ifError(err)
+
+                var startBy = Date.now()
+                sub1.getById(targetId, function (err, record) {
+                    assert.ifError(err)
+
+                    byTime = Date.now() - startBy
+
+                    assert.equal(record.id, targetId)
+
+                    var startFor = Date.now()
+                    sub2.getFor("id", targetId, function (err, records) {
+                        assert.ifError(err)
+
+                        forTime = Date.now() - startFor
+
+                        assert.equal(records.length, 1)
+                        assert.equal(records[0].id, targetId)
+
+                        assert.ok(byTime * 1.5 < forTime)
+
+                        console.log("getFor", forTime, "getById", byTime)
+
+                        assert.end()
+                    })
+                })
+            })
+        })  
+    })
 
     test("decoder() works", skip)
     test("encoder() works", skip)
+
+    test("update() respects encoder()", skip)
+    test("concurrent update() works", skip)
+
+    test("batch semantics are correct. Journal should work", skip)
+}
+
+function range(min, max) {
+    var list = []
+
+    for (var i = min; i < max; i++) {
+        list.push(i)
+    }
+
+    return list
 }
 
 function skip(assert) { return assert.end() }

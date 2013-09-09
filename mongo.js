@@ -6,6 +6,10 @@ var NOT_FOUND = TypedError({
     type: "not.found",
     message: "could not find key %s"
 })
+var NO_INDEX = TypedError({
+    type: "nonexistant.index",
+    message: "could not get by %s as no index exists"
+})
 
 module.exports = EventedRepository
 
@@ -22,6 +26,19 @@ function EventedRepository(db, opts) {
     var decoder = opts.decoder || identity
     var missingCallback = opts.missingCallback || noop
     var primaryKey = opts.primaryKey || "id"
+    var indexes = opts.indexes || []
+    var sortCriteria = {}
+    sortCriteria[primaryKey] = 1
+
+    if (indexes.indexOf(primaryKey) === -1) {
+        indexes.push(primaryKey)
+    }
+
+    indexes.forEach(function (key) {
+        var opts = {}
+        opts[key] = 1
+        collection.ensureIndex(opts, { background: true }, missingCallback)
+    })
 
     return {
         store: store,
@@ -32,7 +49,8 @@ function EventedRepository(db, opts) {
 
         getById: getByPrimaryKey,
         getAll: getAll,
-        getFor: getFor
+        getFor: getFor,
+        getBy: getBy
     }
 
     function store(records, callback) {
@@ -158,26 +176,46 @@ function EventedRepository(db, opts) {
     }
 
     function getAll(callback) {
-        collection.find().toArray(function (err, records) {
-            if (err) {
-                return callback(err)
-            }
+        collection.find({}, { sort: sortCriteria })
+            .toArray(function (err, records) {
+                if (err) {
+                    return callback(err)
+                }
 
-            callback(null, records.map(decoder))
-        })
+                callback(null, records.map(decoder))
+            })
     }
 
     function getFor(key, value, callback) {
         var query = {}
         query[key] = value
 
-        collection.find(query).toArray(function (err, records) {
-            if (err) {
-                return callback(err)
-            }
+        collection.find(query, { sort: sortCriteria })
+            .toArray(function (err, records) {
+                if (err) {
+                    return callback(err)
+                }
 
-            callback(null, records.map(decoder))
-        })
+                callback(null, records.map(decoder))
+            })
+    }
+
+    function getBy(key, value, callback) {
+        if (indexes.indexOf(key) === -1) {
+            return callback(NO_INDEX(key))
+        }
+
+        var query = {}
+        query[key] = value
+
+        collection.find(query, { sort: sortCriteria })
+            .toArray(function (err, records) {
+                if (err) {
+                    return callback(err)
+                }
+
+                callback(null, records.map(decoder))
+            })
     }
 }
 
