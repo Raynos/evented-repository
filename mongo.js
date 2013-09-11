@@ -112,8 +112,19 @@ function EventedRepository(db, opts) {
                 }
 
                 var newValue = encoder(extend(record, delta))
+                var setChange = Object.keys(newValue).
+                    reduce(function (acc, key) {
+                        var value = newValue[key]
+                        var oldValue = record[key]
+
+                        if (value !== oldValue) {
+                            acc[key] = value
+                        }
+                        return acc
+                    }, {})
+
                 collection.update(query, {
-                    $set: delta
+                    $set: setChange
                 }, function (err) {
                     if (err) {
                         return callback(err)
@@ -187,17 +198,27 @@ function EventedRepository(db, opts) {
     }
 
     function getFor(key, value, callback) {
-        var query = {}
-        query[key] = value
+        var list = []
 
-        collection.find(query, { sort: sortCriteria })
-            .toArray(function (err, records) {
-                if (err) {
-                    return callback(err)
-                }
+        var stream = collection.find({}, { sort: sortCriteria })
+            .stream()
 
-                callback(null, records.map(decoder))
+        stream
+            .on("data", onData)
+            .once("error", callback)
+            .once("end", function onEnd() {
+                stream.removeListener("data", onData)
+
+                callback(null, list)
             })
+
+        function onData(chunk) {
+            var record = decoder(chunk)
+
+            if (record[key] === value) {
+                list.push(record)
+            }
+        }
     }
 
     function getBy(key, value, callback) {
