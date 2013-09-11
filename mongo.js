@@ -73,7 +73,7 @@ function EventedRepository(db, opts) {
                     return callback(err)
                 }
 
-                callback(null, decoder(records))
+                callback(null, records.map(decoder))
             })
         })
 
