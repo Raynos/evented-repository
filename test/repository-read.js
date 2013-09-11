@@ -98,7 +98,6 @@ function TestReadRepository(test, Repository, db) {
 
             sub.getBy("sex", "male", function (err, records) {
                 assert.ifError(err)
-
                 assert.equal(records[0].name, "bob")
                 assert.equal(records[1].name, "steve")
 

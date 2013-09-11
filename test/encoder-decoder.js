@@ -78,9 +78,12 @@ function TestEncoderDecoder(test, Repository, db) {
         sub.store([{ name: "steve" }], function (err, records) {
             assert.ifError(err)
 
+            var createdAt = records[0].createdAt
+            var lastUpdated = records[0].lastUpdated
+
             assert.equal(records[0].name, "steve")
-            assert.equal(records[0].createdAt, now)
-            assert.equal(records[0].lastUpdated, now)
+            assert.ok(createdAt === now || createdAt === now + 1)
+            assert.ok(lastUpdated === now || lastUpdated === now + 1)
 
             sub.update(records[0].id, {
                 sex: "male"
@@ -133,8 +136,6 @@ function TestEncoderDecoder(test, Repository, db) {
                     assert.equal(record.boolean, undefined)
                     assert.notOk("boolean" in record)
 
-                    console.log("record", record)
-
                     sub.update(id, { gender: "M" }, function (err, record) {
                         assert.ifError(err)
 
@@ -153,5 +154,3 @@ function TestEncoderDecoder(test, Repository, db) {
         })
     })
 }
-
-function skip(assert) { return assert.end() }

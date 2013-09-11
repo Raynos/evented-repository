@@ -21,6 +21,7 @@ function TestIndexesRepository(test, Repository, db) {
             } else if (record) {
                 assert.end()
             } else {
+                console.log("wtf", err, record)
                 assert.fail("wtf")
             }
         })
@@ -54,6 +55,7 @@ function TestIndexesRepository(test, Repository, db) {
 
             byTime = Date.now() - startBy
 
+            console.log("records", records.length)
             assert.equal(records.length, 100)
 
             var startFor = Date.now()
