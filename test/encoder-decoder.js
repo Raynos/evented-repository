@@ -4,8 +4,7 @@ module.exports = TestEncoderDecoder
 
 function TestEncoderDecoder(test, Repository, db) {
     var repo = Repository(db, {
-        namespace: "main",
-        indexes: ["country"]
+        namespace: "main"
     })
 
     test("decoder() works", function (assert) {

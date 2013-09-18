@@ -4,8 +4,7 @@ module.exports = TestIndexesRepository
 
 function TestIndexesRepository(test, Repository, db) {
     var repo = Repository(db, {
-        namespace: "main",
-        indexes: ["country"]
+        namespace: "main"
     })
 
     var indexSub = repo.sub({
@@ -27,11 +26,12 @@ function TestIndexesRepository(test, Repository, db) {
         })
 
         function insertData() {
-            var records = range(0, 100000).map(function (index) {
+            var records = range(0, 10000).map(function (index) {
                 return {
                     id: String(index),
+                    secondId: String(index),
                     sex: index % 2 === 0 ? "male" : "female",
-                    count: String(index % 1000)
+                    count: String(index % 100)
                 }
             })
 
@@ -53,20 +53,19 @@ function TestIndexesRepository(test, Repository, db) {
         indexSub.getBy("count", "50", function (err, records) {
             assert.ifError(err)
 
-            byTime = Date.now() - startBy
+            var byTime = Date.now() - startBy
 
-            console.log("records", records.length)
             assert.equal(records.length, 100)
 
             var startFor = Date.now()
             nonSub.getFor("count", "50", function (err, records) {
                 assert.ifError(err)
 
-                forTime = Date.now() - startFor
+                var forTime = Date.now() - startFor
 
                 assert.equal(records.length, 100)
 
-                assert.ok(byTime * 10 < forTime)
+                assert.ok(byTime * 2 < forTime)
 
                 console.log("#COMMENT getFor", forTime, "getBy", byTime)
 
@@ -76,25 +75,25 @@ function TestIndexesRepository(test, Repository, db) {
     })
 
     test("getById() vs getFor() performance", function (assert) {
-        var targetId = "50000"
+        var targetId = "5000"
         var startBy = Date.now()
         indexSub.getById(targetId, function (err, record) {
             assert.ifError(err)
 
-            byTime = Date.now() - startBy
+            var byTime = Date.now() - startBy
 
             assert.equal(record.id, targetId)
 
             var startFor = Date.now()
-            nonSub.getFor("id", targetId, function (err, records) {
+            nonSub.getFor("secondId", targetId, function (err, records) {
                 assert.ifError(err)
 
-                forTime = Date.now() - startFor
+                var forTime = Date.now() - startFor
 
                 assert.equal(records.length, 1)
-                assert.equal(records[0].id, targetId)
+                assert.equal(records[0] && records[0].id, targetId)
 
-                assert.ok(byTime * 10 < forTime)
+                assert.ok(byTime * 2 < forTime)
 
                 console.log("#COMMENT getFor", forTime, "getById", byTime)
 

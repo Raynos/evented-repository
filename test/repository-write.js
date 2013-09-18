@@ -4,8 +4,7 @@ module.exports = TestWriteRepository
 
 function TestWriteRepository(test, Repository, db) {
     var repo = Repository(db, {
-        namespace: "main",
-        indexes: ["country"]
+        namespace: "main"
     })
 
     test("repository has correct methods", function (assert) {
@@ -164,15 +163,8 @@ function TestWriteRepository(test, Repository, db) {
     })
 
     test("concurrent update() works", skip)
-
-<<<<<<< HEAD:test/repository-test.js
-    test("decoder() works", skip)
-    test("encoder() works", skip)
-
     test("update() race conditions", skip)
-=======
     test("batch semantics are correct. Journal should work", skip)
->>>>>>> 489d1607e326cdb9d314e065da0a0cf0d41aab57:test/repository-write.js
 }
 
 function skip(assert) { return assert.end() }

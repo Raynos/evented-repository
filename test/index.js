@@ -11,18 +11,18 @@ var TestEncoderDecoder = require("./encoder-decoder.js")
 
 var mongoDb = mongo("mongodb://localhost:27017/evented-repository")
 var levelDb = level("/tmp/evented-repository", {
-	valueEncoding: "json"
+    valueEncoding: "json"
 })
 
 testRepository(MongoRepository, mongoDb)
 testRepository(LevelRepository, levelDb)
 
 test("close leveldb", function (assert) {
-	levelDb.close(function (err) {
-		assert.ifError(err)
+    levelDb.close(function (err) {
+        assert.ifError(err)
 
-		assert.end()
-	})	
+        assert.end()
+    })
 })
 
 test("close mongo", function (assert) {
@@ -34,8 +34,8 @@ test("close mongo", function (assert) {
 })
 
 function testRepository(Repository, db) {
-	TestWriteRepository(test, Repository, db)
-	TestReadRepository(test, Repository, db)
-	TestIndexesRepository(test, Repository, db)
-	TestEncoderDecoder(test, Repository, db)
+    TestWriteRepository(test, Repository, db)
+    TestReadRepository(test, Repository, db)
+    TestIndexesRepository(test, Repository, db)
+    TestEncoderDecoder(test, Repository, db)
 }

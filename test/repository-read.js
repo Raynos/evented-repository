@@ -4,8 +4,7 @@ module.exports = TestReadRepository
 
 function TestReadRepository(test, Repository, db) {
     var repo = Repository(db, {
-        namespace: "main",
-        indexes: ["country"]
+        namespace: "main"
     })
 
     test("getById()", function (assert) {
@@ -81,6 +80,29 @@ function TestReadRepository(test, Repository, db) {
         })
     })
 
+    test("getFor() for a nested key", function (assert) {
+        var id = uuid()
+        var sub = repo.sub(id)
+
+        sub.store([
+            { name: "steve", id: "3", meta: { sex: "male" } },
+            { name: "mary", id: "1", meta: { sex: "female" } },
+            { name: "bob", id: "2", meta: { sex: "male" } },
+            { name: "susan", id: "4", meta: { sex: "female" } }
+        ], function (err) {
+            assert.ifError(err)
+
+            sub.getFor("meta.sex", "male", function (err, records) {
+                assert.ifError(err)
+
+                assert.equal(records[0].name, "bob")
+                assert.equal(records[1].name, "steve")
+
+                assert.end()
+            })
+        })
+    })
+
     test("getBy() on a sub", function (assert) {
         var id = uuid()
         var sub = repo.sub({
@@ -98,6 +120,33 @@ function TestReadRepository(test, Repository, db) {
 
             sub.getBy("sex", "male", function (err, records) {
                 assert.ifError(err)
+
+                assert.equal(records[0].name, "bob")
+                assert.equal(records[1].name, "steve")
+
+                assert.end()
+            })
+        })
+    })
+
+    test("getBy() for a nested key", function (assert) {
+        var id = uuid()
+        var sub = repo.sub({
+            indexes: ["meta.sex"],
+            namespace: id
+        })
+
+        sub.store([
+            { name: "steve", id: "3", meta: { sex: "male" } },
+            { name: "mary", id: "1", meta: { sex: "female" } },
+            { name: "bob", id: "2", meta: { sex: "male" } },
+            { name: "susan", id: "4", meta: { sex: "female" } }
+        ], function (err) {
+            assert.ifError(err)
+
+            sub.getBy("meta.sex", "male", function (err, records) {
+                assert.ifError(err)
+
                 assert.equal(records[0].name, "bob")
                 assert.equal(records[1].name, "steve")
 

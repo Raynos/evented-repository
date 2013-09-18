@@ -207,27 +207,17 @@ function EventedRepository(db, opts) {
     }
 
     function getFor(key, value, callback) {
-        var list = []
+        var query = {}
+        query[key] = value
 
-        var stream = collection.find({}, { sort: sortCriteria })
-            .stream()
+        collection.find(query, { sort: sortCriteria })
+            .toArray(function (err, records) {
+                if (err) {
+                    return callback(err)
+                }
 
-        stream
-            .on("data", onData)
-            .once("error", callback)
-            .once("end", function onEnd() {
-                stream.removeListener("data", onData)
-
-                callback(null, list)
+                callback(null, records.map(decoder))
             })
-
-        function onData(chunk) {
-            var record = decoder(chunk)
-
-            if (record[key] === value) {
-                list.push(record)
-            }
-        }
     }
 
     function getBy(key, value, callback) {

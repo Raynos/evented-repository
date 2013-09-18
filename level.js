@@ -3,6 +3,8 @@ var uuid = require("uuid")
 var TypedError = require("error/typed")
 var extend = require("xtend")
 var deleteRange = require("level-delete-range")
+var subindex = require("subindex")
+var dotty = require("dotty")
 
 var NOT_FOUND = TypedError({
     type: "not.found",
@@ -27,33 +29,22 @@ function EventedRepository(database, opts) {
     var primaryKey = opts.primaryKey || "id"
     var indexes = opts.indexes || []
     var eventNamespace = opts.eventNamespace || "~events"
-    var indexNamespace = opts.indexNamespace || "~indexes"
 
     var db = Sublevel(database)
+    db = subindex(db)
     var eventDb = db.sublevel(eventNamespace)
-    var indexDb = db.sublevel(indexNamespace)
+    // var indexDb = db.sublevel(indexNamespace)
 
-    var indexDbs = indexes.reduce(function (acc, key) {
-        acc[key] = indexDb.sublevel(key)
-        return acc
-    }, {})
+    indexes.forEach(function (indexKey) {
+        // console.log("registerIndex", indexKey)
+        db.ensureIndex(indexKey, function (key, value, emit) {
+            // console.log("indexing", indexKey, indexValue, value)
+            var indexValue = dotty.get(value, indexKey)
+            // console.log("indexing", indexKey, indexValue, value)
 
-    db.pre(function (op, add) {
-        var value = op.value
-
-        if (op.type !== "put") {
-            return
-        }
-
-        indexes.forEach(function (key) {
-            var command = {
-                key: value[key] + "~" + value[primaryKey],
-                value: value,
-                type: "put",
-                prefix: indexDbs[key]
+            if (indexValue) {
+                emit(indexValue)
             }
-
-            add(command)
         })
     })
 
@@ -229,7 +220,7 @@ function EventedRepository(database, opts) {
         function onData(chunk) {
             var record = decoder(chunk.value)
 
-            if (record[key] === value) {
+            if (dotty.get(record, key) === value) {
                 list.push(record)
             }
         }
@@ -241,27 +232,53 @@ function EventedRepository(database, opts) {
         }
 
         var list = []
-        var stream = indexDbs[key].createReadStream({
-            start: value + "~",
-            end: value + "~~"
+        var counter = 0
+        var ended = false
+        callback = once(callback)
+
+        var stream = db.createIndexStream(key, {
+            start: [value, null],
+            end: [value, undefined]
         })
 
-        stream
-            .on("data", onData)
+        stream.on("data", onData)
             .once("error", callback)
             .once("end", function onEnd() {
+                ended = true
                 stream.removeListener("data", onData)
 
-                callback(null, list)
+                if (counter === 0) {
+                    callback(null, list)
+                }
             })
 
         function onData(chunk) {
-            var record = decoder(chunk.value)
+            counter++
+            db.get(chunk.value, function (err, value) {
+                if (err) {
+                    return callback(err)
+                }
 
-            list.push(record)
+                list.push(decoder(value))
+                if (--counter === 0 && ended) {
+                    callback(null, list)
+                }
+            })
         }
     }
 }
 
 function identity(x) { return x }
 function noop() {}
+
+function once(cb) {
+    var called = false
+    return function () {
+        if (called) {
+            return
+        }
+
+        called = true
+        cb.apply(this, arguments)
+    }
+}
