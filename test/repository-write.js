@@ -1,9 +1,12 @@
 var uuid = require("uuid")
 
-module.exports = TestRepository
+module.exports = TestWriteRepository
 
-function TestRepository(test, Repository, db) {
-    var repo = Repository(db, "main")
+function TestWriteRepository(test, Repository, db) {
+    var repo = Repository(db, {
+        namespace: "main",
+        indexes: ["country"]
+    })
 
     test("repository has correct methods", function (assert) {
         assert.equal(typeof repo.store, "function")
@@ -15,7 +18,7 @@ function TestRepository(test, Repository, db) {
         assert.equal(typeof repo.getById, "function")
         assert.equal(typeof repo.getAll, "function")
         assert.equal(typeof repo.getFor, "function")
-        // assert.equal(typeof repo.getBy, "function")
+        assert.equal(typeof repo.getBy, "function")
 
         assert.end()
     })
@@ -160,36 +163,16 @@ function TestRepository(test, Repository, db) {
         })
     })
 
-    test("getById()", function (assert) {
-        var id = uuid()
-        repo.store([{ name: "steve", id: id }], function (err) {
-            assert.ifError(err)
+    test("concurrent update() works", skip)
 
-            repo.getById(id, function (err, record) {
-                assert.ifError(err)
-
-                assert.equal(record.id, id)
-                assert.equal(record.name, "steve")
-
-                assert.end()
-            })
-        })
-    })
-
-    test("getById() non existant", skip)
-
-    test("getAll() on a sub", skip)
-    test("getFor() on a sub", skip)
-    test("getBy() on a sub", skip)
-    test("getBy() non indexed key", skip)
-
-    test("getBy() vs getFor() performance", skip)
-    test("getById() vs getFor() performance", skip)
-
+<<<<<<< HEAD:test/repository-test.js
     test("decoder() works", skip)
     test("encoder() works", skip)
 
     test("update() race conditions", skip)
+=======
+    test("batch semantics are correct. Journal should work", skip)
+>>>>>>> 489d1607e326cdb9d314e065da0a0cf0d41aab57:test/repository-write.js
 }
 
 function skip(assert) { return assert.end() }

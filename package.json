@@ -1,6 +1,6 @@
 {
   "name": "evented-repository",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Repository interface for noSQL database",
   "keywords": [],
   "author": "Raynos <raynos2@gmail.com>",
@@ -19,11 +19,17 @@
   "dependencies": {
     "error": "~2.0.3",
     "xtend": "~2.0.6",
-    "uuid": "~1.4.1"
+    "uuid": "~1.4.1",
+    "level-delete-range": "~0.1.0"
   },
   "devDependencies": {
     "tape": "~1.0.4",
-    "continuable-mongo": "~0.6.1"
+    "continuable-mongo": "~0.6.2",
+    "optimist": "~0.6.0",
+    "level": "~0.15.0",
+    "level-sublevel": "~5.1.1",
+    "leveldown": "~0.8.2",
+    "levelup": "~0.16.0"
   },
   "licenses": [
     {

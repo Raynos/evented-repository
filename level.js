@@ -1,6 +1,8 @@
+var Sublevel = require("level-sublevel")
 var uuid = require("uuid")
 var TypedError = require("error/typed")
 var extend = require("xtend")
+var deleteRange = require("level-delete-range")
 
 var NOT_FOUND = TypedError({
     type: "not.found",
@@ -13,7 +15,7 @@ var NO_INDEX = TypedError({
 
 module.exports = EventedRepository
 
-function EventedRepository(db, opts) {
+function EventedRepository(database, opts) {
     if (typeof opts === "string") {
         opts = { namespace: opts }
     }
@@ -24,27 +26,35 @@ function EventedRepository(db, opts) {
     var missingCallback = opts.missingCallback || noop
     var primaryKey = opts.primaryKey || "id"
     var indexes = opts.indexes || []
-    var namespace = opts.namespace
     var eventNamespace = opts.eventNamespace || "~events"
+    var indexNamespace = opts.indexNamespace || "~indexes"
 
-    if (!namespace) {
-        throw new Error("Missing namespace option")
-    }
+    var db = Sublevel(database)
+    var eventDb = db.sublevel(eventNamespace)
+    var indexDb = db.sublevel(indexNamespace)
 
-    var collection = db.collection(namespace)
-    var eventCollection = db.collection(namespace + eventNamespace)
+    var indexDbs = indexes.reduce(function (acc, key) {
+        acc[key] = indexDb.sublevel(key)
+        return acc
+    }, {})
 
-    var sortCriteria = {}
-    sortCriteria[primaryKey] = 1
+    db.pre(function (op, add) {
+        var value = op.value
 
-    if (indexes.indexOf(primaryKey) === -1) {
-        indexes.push(primaryKey)
-    }
+        if (op.type !== "put") {
+            return
+        }
 
-    indexes.forEach(function (key) {
-        var opts = {}
-        opts[key] = 1
-        collection.ensureIndex(opts, { background: true }, missingCallback)
+        indexes.forEach(function (key) {
+            var command = {
+                key: value[key] + "~" + value[primaryKey],
+                value: value,
+                type: "put",
+                prefix: indexDbs[key]
+            }
+
+            add(command)
+        })
     })
 
     return {
@@ -70,12 +80,12 @@ function EventedRepository(db, opts) {
             }
         })
 
-        eventCollection.insert(records.map(asStoreEvent), function (err) {
+        eventDb.batch(records.map(asStoreEvent), function (err) {
             if (err) {
                 return callback(err)
             }
 
-            collection.insert(records, function (err, records) {
+            db.batch(records.map(asStore), function (err) {
                 if (err) {
                     return callback(err)
                 }
@@ -87,60 +97,49 @@ function EventedRepository(db, opts) {
 
     function asStoreEvent(record) {
         return {
-            name: "record created",
-            record: record,
-            id: record[primaryKey],
-            time: Date.now()
+            type: "put",
+            key: record[primaryKey] + "~" + uuid(),
+            value: {
+                name: "record created",
+                record: record,
+                id: record[primaryKey],
+                time: Date.now()
+            }
+        }
+    }
+
+    function asStore(record) {
+        return {
+            type: "put",
+            key: record[primaryKey],
+            value: record
         }
     }
 
     function update(id, delta, callback) {
         callback = callback || missingCallback
 
-        eventCollection.insert([{
+        eventDb.put(id + "~" + uuid(), {
             name: "record updated",
             id: id,
             delta: delta,
             time: Date.now()
-        }], function (err) {
+        }, function (err) {
             if (err) {
                 return callback(err)
             }
 
-            var query = {}
-            query[primaryKey] = id
-            collection.findOne(query, function (err, record) {
+            db.get(id, function (err, record) {
+                if (err && err.notFound) {
+                    return callback(NOT_FOUND(id))
+                }
+
                 if (err) {
                     return callback(err)
                 }
 
-                if (record === null) {
-                    return callback(NOT_FOUND(id))
-                }
-
                 var newValue = encoder(extend(record, delta))
-                var setChange = Object.keys(newValue).
-                    reduce(function (acc, key) {
-                        var value = newValue[key]
-                        var oldValue = record[key]
-
-                        if (value !== oldValue) {
-                            acc[key] = value
-                        }
-                        return acc
-                    }, {})
-                var unsetChange = Object.keys(record).
-                    reduce(function (acc, key) {
-                        if (!(key in newValue)) {
-                            acc[key] = 1
-                        }
-                        return acc
-                    }, {})
-
-                collection.update(query, {
-                    $set: setChange,
-                    $unset: unsetChange
-                }, function (err) {
+                db.put(id, newValue, function (err) {
                     if (err) {
                         return callback(err)
                     }
@@ -154,23 +153,21 @@ function EventedRepository(db, opts) {
     function remove(id, callback) {
         callback = callback || missingCallback
 
-        eventCollection.insert([{
+        eventDb.put(id + "~" + uuid(), {
             name: "record removed",
             id: id,
             time: Date.now()
-        }], function (err) {
+        }, function (err) {
             if (err) {
                 return callback(err)
             }
 
-            var query = {}
-            query[primaryKey] = id
-            collection.remove(query, callback)
+            db.del(id, callback)
         })
     }
 
     function drop(callback) {
-        collection.drop(callback)
+        deleteRange(db, {}, callback)
     }
 
     function sub(options) {
@@ -178,15 +175,16 @@ function EventedRepository(db, opts) {
             options = { namespace: options }
         }
 
-        options.namespace = opts.namespace + "." + options.namespace
-        return EventedRepository(db, options)
+        var subDb = db.sublevel(options.namespace)
+        return EventedRepository(subDb, options)
     }
 
     function getByPrimaryKey(key, callback) {
-        var query = {}
-        query[primaryKey] = key
+        db.get(key, function (err, record) {
+            if (err && err.notFound) {
+                return callback(null, null)
+            }
 
-        collection.findOne(query, function (err, record) {
             if (err) {
                 return callback(err)
             }
@@ -196,21 +194,8 @@ function EventedRepository(db, opts) {
     }
 
     function getAll(callback) {
-        collection.find({}, { sort: sortCriteria })
-            .toArray(function (err, records) {
-                if (err) {
-                    return callback(err)
-                }
-
-                callback(null, records.map(decoder))
-            })
-    }
-
-    function getFor(key, value, callback) {
         var list = []
-
-        var stream = collection.find({}, { sort: sortCriteria })
-            .stream()
+        var stream = db.createReadStream()
 
         stream
             .on("data", onData)
@@ -222,7 +207,27 @@ function EventedRepository(db, opts) {
             })
 
         function onData(chunk) {
-            var record = decoder(chunk)
+            var record = decoder(chunk.value)
+
+            list.push(record)
+        }
+    }
+
+    function getFor(key, value, callback) {
+        var list = []
+        var stream = db.createReadStream()
+
+        stream
+            .on("data", onData)
+            .once("error", callback)
+            .once("end", function onEnd() {
+                stream.removeListener("data", onData)
+
+                callback(null, list)
+            })
+
+        function onData(chunk) {
+            var record = decoder(chunk.value)
 
             if (record[key] === value) {
                 list.push(record)
@@ -235,17 +240,26 @@ function EventedRepository(db, opts) {
             return callback(NO_INDEX(key))
         }
 
-        var query = {}
-        query[key] = value
+        var list = []
+        var stream = indexDbs[key].createReadStream({
+            start: value + "~",
+            end: value + "~~"
+        })
 
-        collection.find(query, { sort: sortCriteria })
-            .toArray(function (err, records) {
-                if (err) {
-                    return callback(err)
-                }
+        stream
+            .on("data", onData)
+            .once("error", callback)
+            .once("end", function onEnd() {
+                stream.removeListener("data", onData)
 
-                callback(null, records.map(decoder))
+                callback(null, list)
             })
+
+        function onData(chunk) {
+            var record = decoder(chunk.value)
+
+            list.push(record)
+        }
     }
 }
 

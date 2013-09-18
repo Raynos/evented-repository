@@ -65,8 +65,6 @@ A `Repository` has a configurable `primary key`. This is referred
 
 ### `indexes`
 
-**UnImplemented**
-
 A `Repository` has an array of secondary index keys (`indexes`).
   These are the keys of properties of the record for which a
   secondary index exists in the repository. Each key in the
@@ -211,8 +209,6 @@ The callback will get called with all the records that match
 
 ### `Repository.getBy(key, value, callback)`
 
-**UnImplemented**
-
 `getBy()` queries the database for records where the property
   with `key` key has the value `value`. `getBy()` will use the
   secondary indexes configured on the `Repository`.
@@ -224,6 +220,13 @@ The callback will get called with the records taht match the
   criteria after they are passed through the optional `decoder`
 
 `getBy()` is optimized by a secondary index.
+
+
+## Todos
+
+ - Add `batch()` primitive
+ - Add `range()` primitive
+ - Update `getFor()` and `getBy()` to work with nested paths
 
 ## Installation
 
