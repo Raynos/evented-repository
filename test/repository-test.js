@@ -188,6 +188,8 @@ function TestRepository(test, Repository, db) {
 
     test("decoder() works", skip)
     test("encoder() works", skip)
+
+    test("update() race conditions", skip)
 }
 
 function skip(assert) { return assert.end() }
