@@ -226,7 +226,7 @@ The callback will get called with the records taht match the
 
  - Add `batch()` primitive
  - Add `range()` primitive
- - Update `getFor()` and `getBy()` to work with nested paths
+ - ~~Update `getFor()` and `getBy()` to work with nested paths~~
 
 ## Installation
 
