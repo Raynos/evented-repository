@@ -64,6 +64,41 @@ function TestWriteRepository(test, Repository, db) {
         })
     })
 
+    test("update() record with deep properties", function (assert) {
+        var id = uuid()
+
+        repo.store([{
+            id: id,
+            name: "abc",
+            meta: {
+                a:{
+                    A:1
+                },
+                b:{
+                    B:1
+                }
+            }
+        }], function (err) {
+            assert.ifError(err)
+
+            repo.update(id, {
+                meta:{
+                    a: {
+                        A:2
+                    }
+                }
+            }, function (err, record) {
+                assert.ifError(err)
+
+                assert.equal(record.id, id)
+                assert.equal(record.meta.a.A, 2)
+                assert.equal(record.meta.b.B, 1)
+
+                assert.end()
+            })
+        })
+    })
+
     test("update() non existant id", function (assert) {
         var id = uuid()
 
