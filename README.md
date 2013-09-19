@@ -164,7 +164,7 @@ The encoder and decoder are meant to be used as a way to add
 }
 ```
 
-### `Repository.update(id, delta, callback)`
+### `Repository.update(id, [keypath,] delta, callback)`
 
 `update()` takes an `id` for a record (the value of it's
   `primary key`) and a `delta` object. It will fetch the current
@@ -173,6 +173,10 @@ The encoder and decoder are meant to be used as a way to add
   value. The new value extended with the properties of the
   `delta` object is then passed through the optional `encoder`
   function and persisted back into the database.
+
+You can pass an optional `keypath` to `update` to allow you to
+  shallowly extend a nested property instead of shallowly extending
+  the entire object
 
 `update()` will fail with a `"not.found"` error if there is no
   record for the `id`
