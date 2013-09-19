@@ -29,7 +29,7 @@ var repo = EventedRepository(db, {
 
 ## Example: updating a value
 
-```
+```js
 var repo = ...
 
 repo.store([{
@@ -55,7 +55,7 @@ repo.store([{
 
 ## Example: updating a nested value
 
-```
+```js
 var repo = ...
 
 repo.store([{
