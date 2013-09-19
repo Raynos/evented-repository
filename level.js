@@ -120,6 +120,7 @@ function EventedRepository(database, opts) {
             name: "record updated",
             id: id,
             delta: delta,
+            keypath: keypath,
             time: Date.now()
         }, function (err) {
             if (err) {

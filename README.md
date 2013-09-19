@@ -192,6 +192,7 @@ The `callback` will be called with the new extended value once
   name: "record updated",
   id: {{recordPrimaryKey}},
   delta: {{deltaToApply}},
+  keypath: {{keypath}},
   time: Number
 }
 ```
