@@ -1,6 +1,6 @@
 type EventedRepository<T> := {
     store: (Array<T>, Callback<Array<T>>),
-    update: (id: String, delta: Object, Callback<T>),
+    update: (id: String, keypath?: String, delta: Object, Callback<T>),
     remove: (id: String, Callback<void>),
     drop: (Callback<void>),
     sub: (opts: String | Object) => EventedRepository<X>,

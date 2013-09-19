@@ -27,6 +27,58 @@ var repo = EventedRepository(db, {
 // do stuff
 ```
 
+## Example: updating a value
+
+```
+var repo = ...
+
+repo.store([{
+  name: "steve",
+  email: "steve@evented-repository.com",
+  relatives: [{
+    relation: "father",
+    name: "bob",
+    email: "bob@evented-repository.com"
+  }]
+}], function (err, docs) {
+  if (err) throw err
+
+  repo.update(docs[0].id, {
+    email: "new-steve@email.com"
+  }, function (err, doc) {
+    if (err) throw err
+
+    console.log("new document", doc)
+  })
+})
+```
+
+## Example: updating a nested value
+
+```
+var repo = ...
+
+repo.store([{
+  name: "steve",
+  email: "steve@evented-repository.com",
+  relatives: [{
+    relation: "father",
+    name: "bob",
+    email: "bob@evented-repository.com"
+  }]
+}], function (err, docs) {
+  if (err) throw err
+
+  repo.update(docs[0].id, "relatives.0", {
+    email: "new-bob@email.com"
+  }, function (err, doc) {
+    if (err) throw err
+
+    console.log("new document", doc)
+  })
+})
+```
+
 ## Docs
 
 A `Repository` is a data access interface with a shape like
@@ -34,7 +86,7 @@ A `Repository` is a data access interface with a shape like
 ```ocaml
 type Repository<T> := {
     store: (Array<T>, Callback<Array<T>>),
-    update: (id: String, delta: Object, Callback<T>),
+    update: (id: String, keypath?: String, delta: Object, Callback<T>),
     remove: (id: String, Callback<void>),
     drop: (Callback<void>),
     sub: (namespace: String, opts: Object) => Repository<X>,

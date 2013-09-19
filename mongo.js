@@ -1,6 +1,7 @@
 var uuid = require("uuid")
 var TypedError = require("error/typed")
 var extend = require("xtend")
+var dotty = require("dotty")
 
 var NOT_FOUND = TypedError({
     type: "not.found",
@@ -94,7 +95,13 @@ function EventedRepository(db, opts) {
         }
     }
 
-    function update(id, delta, callback) {
+    function update(id, keypath, delta, callback) {
+        if (typeof keypath === "object") {
+            callback = delta
+            delta = keypath
+            keypath = null
+        }
+
         callback = callback || missingCallback
 
         eventCollection.insert([{
@@ -118,7 +125,16 @@ function EventedRepository(db, opts) {
                     return callback(NOT_FOUND(id))
                 }
 
-                var newValue = encoder(extend(record, delta))
+                var newRecord
+                if (keypath === null) {
+                    newRecord = extend(record, delta)
+                } else {
+                    newRecord = extend(record)
+                    dotty.put(newRecord, keypath,
+                        extend(dotty.get(record, keypath), delta))
+                }
+
+                var newValue = encoder(newRecord)
                 var setChange = Object.keys(newValue).
                     reduce(function (acc, key) {
                         var value = newValue[key]

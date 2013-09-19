@@ -64,6 +64,44 @@ function TestWriteRepository(test, Repository, db) {
         })
     })
 
+    test("nested update() record", function (assert) {
+        var id = uuid()
+
+        repo.store([{
+            name: "steve",
+            id: id,
+            email: "steve@mail.com",
+            relatives: [{
+                relation: "father",
+                name: "bob",
+                email: "bob@mail.com"
+            }]
+        }], function (err) {
+            assert.ifError(err)
+
+            repo.update(id, "relatives.0", {
+                email: "new-bob@mail.com"
+            }, function (err, doc) {
+                assert.ifError(err)
+
+                delete doc._id
+
+                assert.deepEqual(doc, {
+                    name: "steve",
+                    id: id,
+                    email: "steve@mail.com",
+                    relatives: [{
+                        relation: "father",
+                        name: "bob",
+                        email: "new-bob@mail.com"
+                    }]
+                })
+
+                assert.end()
+            })
+        })
+    })
+
     test("update() non existant id", function (assert) {
         var id = uuid()
 

@@ -107,7 +107,13 @@ function EventedRepository(database, opts) {
         }
     }
 
-    function update(id, delta, callback) {
+    function update(id, keypath, delta, callback) {
+        if (typeof keypath === "object") {
+            callback = delta
+            delta = keypath
+            keypath = null
+        }
+
         callback = callback || missingCallback
 
         eventDb.put(id + "~" + uuid(), {
@@ -129,7 +135,16 @@ function EventedRepository(database, opts) {
                     return callback(err)
                 }
 
-                var newValue = encoder(extend(record, delta))
+                var newRecord
+                if (keypath === null) {
+                    newRecord = extend(record, delta)
+                } else {
+                    newRecord = extend(record)
+                    dotty.put(newRecord, keypath,
+                        extend(dotty.get(record, keypath), delta))
+                }
+
+                var newValue = encoder(newRecord)
                 db.put(id, newValue, function (err) {
                     if (err) {
                         return callback(err)
