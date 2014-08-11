@@ -17,13 +17,13 @@
     "email": "raynos2@gmail.com"
   },
   "dependencies": {
-    "error": "~2.0.3",
-    "xtend": "~2.0.6",
-    "uuid": "~1.4.1",
-    "level-delete-range": "~0.1.0",
     "dotty": "0.0.2",
+    "error": "~2.0.3",
+    "level-delete-range": "~0.1.0",
+    "level-sublevel": "^6.2.2",
     "subindex": "0.0.5",
-    "level-sublevel": "~5.1.1"
+    "uuid": "~1.4.1",
+    "xtend": "~2.0.6"
   },
   "devDependencies": {
     "tape": "~1.0.4",
