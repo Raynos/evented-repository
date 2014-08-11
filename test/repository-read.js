@@ -3,16 +3,16 @@ var uuid = require("uuid")
 module.exports = TestReadRepository
 
 function TestReadRepository(test, Repository, db) {
-    var repo = Repository(db, {
-        namespace: "main"
+    var repo = Repository({
+        namespace: "main-test-read"
     })
 
     test("getById()", function (assert) {
         var id = uuid()
-        repo.store([{ name: "steve", id: id }], function (err) {
+        repo.store(db, [{ name: "steve", id: id }], function (err) {
             assert.ifError(err)
 
-            repo.getById(id, function (err, record) {
+            repo.getById(db, id, function (err, record) {
                 assert.ifError(err)
 
                 assert.equal(record.id, id)
@@ -25,7 +25,7 @@ function TestReadRepository(test, Repository, db) {
 
     test("getById() non existant", function (assert) {
         var id = uuid()
-        repo.getById(id, function (err, record) {
+        repo.getById(db, id, function (err, record) {
             assert.ifError(err)
 
             assert.equal(record, null)
@@ -38,14 +38,14 @@ function TestReadRepository(test, Repository, db) {
         var id = uuid()
         var sub = repo.sub(id)
 
-        sub.store([
+        sub.store(db, [
             { name: "steve", id: "3" },
             { name: "mary", id: "1" },
             { name: "bob", id: "2" }
         ], function (err) {
             assert.ifError(err)
 
-            sub.getAll(function (err, records) {
+            sub.getAll(db, function (err, records) {
                 assert.ifError(err)
 
                 assert.equal(records[0].name, "mary")
@@ -61,7 +61,7 @@ function TestReadRepository(test, Repository, db) {
         var id = uuid()
         var sub = repo.sub(id)
 
-        sub.store([
+        sub.store(db, [
             { name: "steve", id: "3", sex: "male" },
             { name: "mary", id: "1", sex: "female" },
             { name: "bob", id: "2", sex: "male" },
@@ -69,7 +69,7 @@ function TestReadRepository(test, Repository, db) {
         ], function (err) {
             assert.ifError(err)
 
-            sub.getFor("sex", "male", function (err, records) {
+            sub.getFor(db, "sex", "male", function (err, records) {
                 assert.ifError(err)
 
                 assert.equal(records[0].name, "bob")
@@ -84,7 +84,7 @@ function TestReadRepository(test, Repository, db) {
         var id = uuid()
         var sub = repo.sub(id)
 
-        sub.store([
+        sub.store(db, [
             { name: "steve", id: "3", meta: { sex: "male" } },
             { name: "mary", id: "1", meta: { sex: "female" } },
             { name: "bob", id: "2", meta: { sex: "male" } },
@@ -92,7 +92,7 @@ function TestReadRepository(test, Repository, db) {
         ], function (err) {
             assert.ifError(err)
 
-            sub.getFor("meta.sex", "male", function (err, records) {
+            sub.getFor(db, "meta.sex", "male", function (err, records) {
                 assert.ifError(err)
 
                 assert.equal(records[0].name, "bob")
@@ -110,7 +110,7 @@ function TestReadRepository(test, Repository, db) {
             namespace: id
         })
 
-        sub.store([
+        sub.store(db, [
             { name: "steve", id: "3", sex: "male" },
             { name: "mary", id: "1", sex: "female" },
             { name: "bob", id: "2", sex: "male" },
@@ -118,7 +118,7 @@ function TestReadRepository(test, Repository, db) {
         ], function (err) {
             assert.ifError(err)
 
-            sub.getBy("sex", "male", function (err, records) {
+            sub.getBy(db, "sex", "male", function (err, records) {
                 assert.ifError(err)
 
                 assert.equal(records[0].name, "bob")
@@ -136,7 +136,7 @@ function TestReadRepository(test, Repository, db) {
             namespace: id
         })
 
-        sub.store([
+        sub.store(db, [
             { name: "steve", id: "3", meta: { sex: "male" } },
             { name: "mary", id: "1", meta: { sex: "female" } },
             { name: "bob", id: "2", meta: { sex: "male" } },
@@ -144,7 +144,7 @@ function TestReadRepository(test, Repository, db) {
         ], function (err) {
             assert.ifError(err)
 
-            sub.getBy("meta.sex", "male", function (err, records) {
+            sub.getBy(db, "meta.sex", "male", function (err, records) {
                 assert.ifError(err)
 
                 assert.equal(records[0].name, "bob")
@@ -156,7 +156,7 @@ function TestReadRepository(test, Repository, db) {
     })
 
     test("getBy() non indexed key", function (assert) {
-        repo.getBy("name", "steve", function (err) {
+        repo.getBy(db, "name", "steve", function (err) {
             assert.ok(err)
             assert.equal(err.type, "nonexistant.index")
 

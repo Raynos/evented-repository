@@ -3,8 +3,8 @@ var uuid = require("uuid")
 module.exports = TestIndexesRepository
 
 function TestIndexesRepository(test, Repository, db) {
-    var repo = Repository(db, {
-        namespace: "main"
+    var repo = Repository({
+        namespace: "main-test-index"
     })
 
     var indexSub = repo.sub({
@@ -14,7 +14,7 @@ function TestIndexesRepository(test, Repository, db) {
     var nonSub = repo.sub("no-indexes")
 
     test("ensure index data exists", function (assert) {
-        indexSub.getById("1", function (err, record) {
+        indexSub.getById(db, "1", function (err, record) {
             if (record === null) {
                 insertData()
             } else if (record) {
@@ -35,10 +35,10 @@ function TestIndexesRepository(test, Repository, db) {
                 }
             })
 
-            indexSub.store(records, function (err) {
+            indexSub.store(db, records, function (err) {
                 assert.ifError(err)
 
-                nonSub.store(records, function (err){
+                nonSub.store(db, records, function (err){
                     assert.ifError(err)
 
                     assert.end()
@@ -50,7 +50,7 @@ function TestIndexesRepository(test, Repository, db) {
 
     test("getBy() vs getFor() performance", function (assert) {
         var startBy = Date.now()
-        indexSub.getBy("count", "50", function (err, records) {
+        indexSub.getBy(db, "count", "50", function (err, records) {
             assert.ifError(err)
 
             var byTime = Date.now() - startBy
@@ -58,7 +58,7 @@ function TestIndexesRepository(test, Repository, db) {
             assert.equal(records.length, 100)
 
             var startFor = Date.now()
-            nonSub.getFor("count", "50", function (err, records) {
+            nonSub.getFor(db, "count", "50", function (err, records) {
                 assert.ifError(err)
 
                 var forTime = Date.now() - startFor
@@ -77,7 +77,7 @@ function TestIndexesRepository(test, Repository, db) {
     test("getById() vs getFor() performance", function (assert) {
         var targetId = "5000"
         var startBy = Date.now()
-        indexSub.getById(targetId, function (err, record) {
+        indexSub.getById(db, targetId, function (err, record) {
             assert.ifError(err)
 
             var byTime = Date.now() - startBy
@@ -85,7 +85,7 @@ function TestIndexesRepository(test, Repository, db) {
             assert.equal(record.id, targetId)
 
             var startFor = Date.now()
-            nonSub.getFor("secondId", targetId, function (err, records) {
+            nonSub.getFor(db, "secondId", targetId, function (err, records) {
                 assert.ifError(err)
 
                 var forTime = Date.now() - startFor

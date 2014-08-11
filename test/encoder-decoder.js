@@ -3,8 +3,8 @@ var uuid = require("uuid")
 module.exports = TestEncoderDecoder
 
 function TestEncoderDecoder(test, Repository, db) {
-    var repo = Repository(db, {
-        namespace: "main"
+    var repo = Repository({
+        namespace: "main-test-encode"
     })
 
     test("decoder() works", function (assert) {
@@ -18,7 +18,7 @@ function TestEncoderDecoder(test, Repository, db) {
             }
         })
 
-        sub.store([
+        sub.store(db, [
             { name: "steve", id: "3", sex: "male" },
             { name: "mary", id: "1", sex: "female" },
             { name: "bob", id: "2", sex: "male" },
@@ -26,19 +26,19 @@ function TestEncoderDecoder(test, Repository, db) {
         ], function (err) {
             assert.ifError(err)
 
-            sub.getBy("sex", "male", function (err, records) {
+            sub.getBy(db, "sex", "male", function (err, records) {
                 assert.ifError(err)
 
                 assert.equal(records[0].gender, "M")
                 assert.equal(records[1].gender, "M")
 
-                sub.getFor("sex", "female", function (err, records) {
+                sub.getFor(db, "sex", "female", function (err, records) {
                     assert.ifError(err)
 
                     assert.equal(records[0].gender, "F")
                     assert.equal(records[1].gender, "F")
 
-                    sub.getAll(function (err, records) {
+                    sub.getAll(db, function (err, records) {
                         assert.ifError(err)
 
                         assert.equal(records[0].gender, "F")
@@ -46,7 +46,7 @@ function TestEncoderDecoder(test, Repository, db) {
                         assert.equal(records[2].gender, "M")
                         assert.equal(records[3].gender, "F")
 
-                        sub.getById("2", function (err, record) {
+                        sub.getById(db, "2", function (err, record) {
                             assert.ifError(err)
 
                             assert.equal(record.gender, "M")
@@ -74,7 +74,7 @@ function TestEncoderDecoder(test, Repository, db) {
         })
 
         var now = Date.now()
-        sub.store([{ name: "steve" }], function (err, records) {
+        sub.store(db, [{ name: "steve" }], function (err, records) {
             assert.ifError(err)
 
             var createdAt = records[0].createdAt
@@ -84,7 +84,7 @@ function TestEncoderDecoder(test, Repository, db) {
             assert.ok(createdAt === now || createdAt === now + 1)
             assert.ok(lastUpdated === now || lastUpdated === now + 1)
 
-            sub.update(records[0].id, {
+            sub.update(db, records[0].id, {
                 sex: "male"
             }, function (err, record) {
                 assert.ifError(err)
@@ -92,7 +92,7 @@ function TestEncoderDecoder(test, Repository, db) {
                 assert.notEqual(record.lastUpdated, records[0].lastUpdated)
                 assert.equal(record.createdAt, records[0].createdAt)
 
-                sub.getById(record.id, function (err, doc) {
+                sub.getById(db, record.id, function (err, doc) {
                     assert.ifError(err)
 
                     assert.equal(doc.lastUpdated, record.lastUpdated)
@@ -118,29 +118,29 @@ function TestEncoderDecoder(test, Repository, db) {
             }
         })
 
-        sub.store([{ name: "steve", id: id }], function (err, records) {
+        sub.store(db, [{ name: "steve", id: id }], function (err, records) {
             assert.ifError(err)
 
             assert.equal(records[0].boolean, true)
 
-            sub.update(id, { sex: "male" }, function (err, record) {
+            sub.update(db, id, { sex: "male" }, function (err, record) {
                 assert.ifError(err)
 
                 assert.equal(record.boolean, undefined)
                 assert.notOk("boolean" in record)
 
-                sub.getById(id, function (err, record) {
+                sub.getById(db, id, function (err, record) {
                     assert.ifError(err)
 
                     assert.equal(record.boolean, undefined)
                     assert.notOk("boolean" in record)
 
-                    sub.update(id, { gender: "M" }, function (err, record) {
+                    sub.update(db, id, { gender: "M" }, function (err, record) {
                         assert.ifError(err)
 
                         assert.equal(record.boolean, true)
 
-                        sub.getById(id, function (err, record) {
+                        sub.getById(db, id, function (err, record) {
                             assert.ifError(err)
 
                             assert.equal(record.boolean, true)

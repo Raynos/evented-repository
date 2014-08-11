@@ -3,7 +3,7 @@ var uuid = require("uuid")
 module.exports = TestWriteRepository
 
 function TestWriteRepository(test, Repository, db) {
-    var repo = Repository(db, {
+    var repo = Repository({
         namespace: "main"
     })
 
@@ -23,7 +23,7 @@ function TestWriteRepository(test, Repository, db) {
     })
 
     test("store() records", function (assert) {
-        repo.store([
+        repo.store(db, [
             { name: "steve" },
             { name: "bob" },
             { name: "mary" }
@@ -45,12 +45,12 @@ function TestWriteRepository(test, Repository, db) {
     test("update() record", function (assert) {
         var id = uuid()
 
-        repo.store([{
+        repo.store(db, [{
             name: "steve", id: id
         }], function (err) {
             assert.ifError(err)
 
-            repo.update(id, {
+            repo.update(db, id, {
                 name: "bob", foo: "bar"
             }, function (err, record) {
                 assert.ifError(err)
@@ -67,7 +67,7 @@ function TestWriteRepository(test, Repository, db) {
     test("nested update() record", function (assert) {
         var id = uuid()
 
-        repo.store([{
+        repo.store(db, [{
             name: "steve",
             id: id,
             email: "steve@mail.com",
@@ -79,7 +79,7 @@ function TestWriteRepository(test, Repository, db) {
         }], function (err) {
             assert.ifError(err)
 
-            repo.update(id, "relatives.0", {
+            repo.update(db, id, "relatives.0", {
                 email: "new-bob@mail.com"
             }, function (err, doc) {
                 assert.ifError(err)
@@ -105,7 +105,7 @@ function TestWriteRepository(test, Repository, db) {
     test("update() non existant id", function (assert) {
         var id = uuid()
 
-        repo.update(id, {
+        repo.update(db, id, {
             name: "bob"
         }, function (err) {
             assert.ok(err)
@@ -118,15 +118,15 @@ function TestWriteRepository(test, Repository, db) {
     test("remove() record", function (assert) {
         var id = uuid()
 
-        repo.store([{
+        repo.store(db, [{
             name: "bob", id: id
         }], function (err) {
             assert.ifError(err)
 
-            repo.remove(id, function (err) {
+            repo.remove(db, id, function (err) {
                 assert.ifError(err)
 
-                repo.getById(id, function (err, record) {
+                repo.getById(db, id, function (err, record) {
                     assert.ifError(err)
                     assert.equal(record, null)
 
@@ -137,7 +137,7 @@ function TestWriteRepository(test, Repository, db) {
     })
 
     test("remove() non existant id", function (assert) {
-        repo.remove(uuid(), function (err) {
+        repo.remove(db, uuid(), function (err) {
             assert.ifError(err)
 
             assert.end()
@@ -148,18 +148,18 @@ function TestWriteRepository(test, Repository, db) {
         var subRepo = repo.sub("sub")
         var id = uuid()
 
-        subRepo.store([{
+        subRepo.store(db, [{
             name: "steve", id: id
         }], function (err) {
             assert.ifError(err)
 
-            subRepo.getById(id, function (err, record) {
+            subRepo.getById(db, id, function (err, record) {
                 assert.ifError(err)
 
                 assert.equal(record.name, "steve")
                 assert.equal(record.id, id)
 
-                repo.getById(id, function (err, record) {
+                repo.getById(db, id, function (err, record) {
                     assert.ifError(err)
 
                     assert.equal(record, null)
@@ -173,22 +173,22 @@ function TestWriteRepository(test, Repository, db) {
     test("drop() sub collection", function (assert) {
         var subRepo = repo.sub(uuid())
 
-        subRepo.store([
+        subRepo.store(db, [
             { name: "steve" },
             { name: "bob" },
             { name: "mary" }
         ], function (err) {
             assert.ifError(err)
 
-            subRepo.getAll(function (err, records) {
+            subRepo.getAll(db, function (err, records) {
                 assert.ifError(err)
 
                 assert.equal(records.length, 3)
 
-                subRepo.drop(function (err) {
+                subRepo.drop(db, function (err) {
                     assert.ifError(err)
 
-                    subRepo.getAll(function (err, records) {
+                    subRepo.getAll(db, function (err, records) {
                         assert.ifError(err)
 
                         assert.equal(records.length, 0)
